@@ -1,54 +1,56 @@
 # GhoomoUP data architecture
 
-This document describes the current prototype's storage boundaries. It distinguishes implemented behavior from the production data model needed in Phase 2.
+## Data sources
 
-## Current storage map
+| Domain | Source of truth | Public exposure |
+| --- | --- | --- |
+| Destination content | `assets/destinations.js`; matched to `public.sites` by stable code/slug | Active destination details and QR routes |
+| Vendor identity | Supabase Auth | None |
+| Vendor business profile | `public.vendors` | Contact fields only when an approved, active listing exists |
+| Service listings | `public.listings` | `public.public_listings` view only |
+| Listing photographs | Private Supabase Storage bucket `listing-images`, indexed by `public.listing_images` | Time-limited signed URLs for approved listings |
+| QR routes | `public.qr_codes` | Active routes for active sites; installation status is separately tracked |
+| Tourist contact | `public.inquiries` | No public reads; listing owner and admin only |
+| Tourism feedback | Existing `public.tourism_feedback` | Existing policies and aggregate RPC |
+| Admin authorization | `public.admin_roles` | Server only; browser roles use the separate signed Netlify session |
 
-| Data | Current store | Shared across devices? | Notes |
-| --- | --- | --- | --- |
-| Destination content | `assets/destinations.js` | Yes, as deployed source | Varanasi, Ayodhya and Prayagraj are active; records include ID, district, slug, category, active status and image reference. |
-| Provider listing drafts and moderation | `localStorage.ghoomoup_listings` | No | No fictional seed providers are loaded. Only approved listings are shown publicly. |
-| Visitor inquiries | `localStorage.ghoomoup_requests` | No | A local copy of the inquiry is saved; the visitor must use the WhatsApp action to contact the provider. |
-| Optional traveler profile | `localStorage.ghoomoup_traveler_profile` | No | Optional device-local form prefill, not a tourist login. |
-| Provider display cache | `localStorage.ghoomoup_current_vendor` | No | UI cache only; Supabase Auth remains the identity authority. |
-| Provider identity/session | Supabase Auth | Yes | Email/password provider accounts and email confirmation. |
-| Tourism feedback | Supabase `tourism_feedback` | Yes when configured | RLS protects individual records; the public aggregate RPC returns counts only. |
-| Admin session | Netlify Function + signed HttpOnly cookie | Session only | Credentials and signing secrets remain server-side. |
-| AI credentials | Netlify environment | Server only | `GROQ_API_KEY` is not delivered to the browser. |
+## Entity relationships
+
+```text
+auth.users 1 ── 0..1 vendors 1 ── * listings * ── 1 sites
+                                      │                 │
+                                      ├── * listing_images
+                                      └── * inquiries    └── * qr_codes
+
+admin_roles — hashed subject and role for the Netlify admin identity
+tourism_feedback — retained existing feedback subsystem
+```
+
+All new entities use UUID primary keys, foreign keys, checks and indexes as declared in `supabase/migrations/20261122030000_marketplace.sql`. Mutable tables include `created_at` and `updated_at`; inquiries are append-only events. `vendors.id` is also the Supabase Auth user ID.
 
 ## Listing lifecycle
 
-1. The application starts with an empty provider listing collection.
-2. A signed-in provider submits a listing draft; it is saved to this browser and marked pending.
-3. Admin approval changes the local record status.
-4. Destination pages render only records whose status is `approved`.
-5. Visitors may save an inquiry locally and continue to WhatsApp to contact the provider.
+1. Auth signup creates a vendor profile from signup metadata. The vendor must verify email before using authenticated marketplace operations.
+2. The vendor saves a listing as `DRAFT` and may upload JPEG, PNG or WebP images (maximum 5 MiB each).
+3. `submit_listing_for_review(p_listing_id)` verifies ownership and transitions a draft, rejected or inactive listing to `PENDING`.
+4. An admin approves it (`APPROVED`, active), rejects/requests changes (`REJECTED`, inactive, feedback required), or deactivates it (`INACTIVE`, inactive).
+5. Editing public listing details or images hides an approved listing and requires another review. Vendors cannot set an approval status themselves.
 
-This is a prototype workflow, not a shared marketplace database. Provider listings, approval changes and inquiries do not synchronize across browsers; a local browser owner can alter local storage. Production approval must be enforced by an authorized backend/database policy.
+Only active sites and approved, active listings are returned by the public directory view. The public view exposes business contact fields intentionally needed for tourist contact; vendor profile details, pending submissions, and inquiry PII remain private.
 
-## Supabase boundary
+## Access model
 
-Supabase currently provides:
-
-- provider authentication;
-- `public.tourism_feedback`, protected by row-level security;
-- `get_tourism_feedback_signals()`, a privacy-safe aggregate.
-
-The repository does not include shared provider listing, approval history or inquiry tables. Do not claim those records are in Supabase.
-
-## AI execution modes
-
-| Mode | Trigger | Behavior |
+| Actor | Read | Write |
 | --- | --- | --- |
-| Live AI | Netlify Function and Groq request succeed | Server prompt returns a concierge response or structured draft. Verify changing facts independently. |
-| Local fallback | Function is missing, times out or returns no usable reply | Active UP destination data supplies general context; only approved local listings can be recommended. |
+| Anonymous visitor | Active sites/routes; approved listing view; approved image objects | Contact/inquiry events only for approved listings |
+| Authenticated vendor | Own profile, listings and image metadata; public approved listings | Own profile, draft listings, listing images, submission through the workflow RPC |
+| Admin UI | Protected queue, vendor/listing details, inquiries and review images | Review decisions through the server-side Netlify function |
+| Netlify service role | Server-mediated admin operations | Server-mediated admin operations only |
 
-The in-browser trip outline is deterministic. It is not live navigation and does not provide verified travel times, availability or price quotes.
+RLS is enabled on all new tables. The Supabase service-role key is not sent to browsers. Admin calls require a valid signed, expiring cookie and an active matching hashed subject in `admin_roles`.
 
-## Phase 2 data work
+## Deployment and migration safety
 
-1. Add shared Supabase listings and inquiries tables with ownership, moderation state and audit history.
-2. Enforce approved-only reads and authorized provider/admin writes using RLS and/or server functions.
-3. Define retention/deletion for personal data and avoid copying tourist details into public analytics.
-4. Add server-side validation, abuse controls, backups and operational monitoring.
-5. Publish listings only after human review and keep a clear status trail.
+The migration intentionally does not create `tourism_feedback`. Apply its existing SQL first only if the table is not already present. Before applying the marketplace migration, inspect the target Supabase schema: it aborts when required feedback is absent or any of the marketplace table names already exist. Reconcile existing tables rather than overwriting them.
+
+The checked-out environment was not linked to the Supabase project and had no local Postgres/Docker service, so the remote schema, SQL execution, and production RLS behavior remain unverified. Review this migration against the live schema before deployment.

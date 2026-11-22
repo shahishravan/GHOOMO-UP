@@ -1,25 +1,29 @@
 # Module disposition
 
-| Existing module | Decision | Rationale / Phase 1 action |
+| Module | Decision | Current handling |
 | --- | --- | --- |
-| Static HTML/CSS/vanilla JS app | **KEEP / MODIFY** | Retain the zero-build and mobile-responsive structure; update brand styling, content and navigation. |
-| Destination metadata embedded in `index.html` | **REPLACE** | Move active destination records into `assets/destinations.js` with the requested stable fields. |
-| Bihar seed listing collection | **REPLACE** | Do not load legacy/demo providers in GhoomoUP. `DEFAULT_LISTINGS` is empty until reviewed listings exist. |
-| Destination detail and category filters | **KEEP / MODIFY** | Preserve existing views and filters; show only approved records and a useful empty state. |
-| Supabase provider authentication | **KEEP** | Existing email/password provider sign-in and email confirmation remain. |
-| Optional tourist profile | **KEEP** | Keep optional/local-only behavior; tourist browsing remains account-free. |
-| Admin auth function and dashboard | **KEEP / MODIFY** | Retain the signed-cookie auth; update default origin and destination brand. Listing management remains browser-local. |
-| Netlify chat function | **KEEP / MODIFY** | Retain the secure proxy pattern and Groq model integration; replace the Bihar concierge prompt with GhoomoUP guidance. |
-| Listing assistant function | **KEEP / MODIFY** | Retain structured draft generation; update the prompt for Uttar Pradesh and keep admin review separate. |
-| Supabase feedback table/RLS/RPC | **KEEP / MODIFY** | Preserve feedback protections and aggregates; change product-facing destination choices/labels to Uttar Pradesh. |
-| Browser-local listing/inquiry storage | **KEEP for prototype / REPLACE for production** | Existing flow remains usable for a single-browser demo; database-backed records and server-side approval are Phase 2 work. |
-| Legacy Bihar destination artwork and seed files | **REPLACE in active UI; RETAIN in repository** | New GhoomoUP mark and original UP illustrations are active. Unreferenced Bihar assets are kept as source history, not displayed. |
-| Hash-based destination QR preview | **REPLACE** | Use `/scan/:slug`, Netlify rewrite, active-site validation and explicit invalid/inactive handling. |
-| Decorative fake QR fallback | **REPLACE** | Show a truthful preview-unavailable message rather than a non-scannable image. |
-| Static landing page and destination cards | **KEEP / MODIFY** | Reuse layout, update destination cards, visitor copy, about section and provider entry point. |
-| Bihar local AI knowledge fallback | **REPLACE in active call path** | Active fallback uses the UP destination data and only recommends approved listings. |
-| Existing tests | **KEEP / MODIFY** | Retain regression coverage and update destination/product assertions. |
-| Destination/QR smoke coverage | **NEW** | Test required destination fields, active IDs/slugs, empty listings and invalid/inactive scan behavior. |
-| AI function boundary tests | **NEW** | Test method/configuration/input validation without sending requests to Groq. |
-| Audit, architecture and test documentation | **NEW** | Add `docs/PROJECT_AUDIT.md`, `docs/EXISTING_ARCHITECTURE.md`, this disposition and `docs/TESTING_REPORT.md`. |
-| Shared listings database, moderation API, QR installation tracking | **NEW (Phase 2)** | Needed for production provider onboarding, cross-device moderation, auditability and physical deployment evidence. |
+| Static HTML/CSS/vanilla JS app | **KEEP / MODIFY** | Reuses the existing mobile-first, zero-build app for destination discovery, vendor and admin interfaces. |
+| Destination metadata in `assets/destinations.js` | **KEEP / MODIFY** | Stable destination IDs, slugs and active status drive landing and scan routes. |
+| Bihar content and seed listings | **REPLACE in active UI** | Uttar Pradesh destination copy is active; no fake marketplace records are seeded. Legacy assets remain only if unreferenced. |
+| Destination detail and category filters | **KEEP / MODIFY** | Preserves QR discovery and now filters database-backed approved listings. |
+| Supabase Auth | **KEEP / EXTEND** | Supports vendor signup, email verification, login, logout and recovery; tourist login is not required. |
+| Supabase tourism feedback | **KEEP** | Existing table, RLS and aggregate functionality are preserved; migration adds only `updated_at` maintenance. |
+| Local listing and inquiry prototype | **REPLACE as marketplace authority** | Supabase becomes the intended shared source for profiles, listings, inquiries and approval. Optional traveler prefill remains local. |
+| Supabase marketplace schema and RLS | **NEW** | Adds sites, vendors, listings, images, QR records, inquiries and admin roles, subject to live-schema reconciliation. |
+| Private listing image storage | **NEW** | JPEG, PNG and WebP uploads capped at 5 MiB, with owner policies and approved-listing signed reads. |
+| Browser marketplace API | **NEW** | Implements public directory reads, vendor CRUD, submission, photo upload and inquiry/contact events using the publishable key. |
+| Admin auth and moderation function | **KEEP / EXTEND** | Existing signed-cookie authentication is retained; moderation API additionally checks an active database role before service-role access. |
+| Vendor dashboard/onboarding | **NEW** | Profile management, draft editing, status feedback, image upload and submission use existing frontend architecture. |
+| Admin marketplace dashboard | **NEW** | Lists submissions and provides approval, rejection, change-request and deactivation actions through the protected function. |
+| WhatsApp contact | **KEEP / MODIFY** | Uses approved vendor contact details; click events are tracked where possible and do not imply a booking. |
+| AI concierge/listing assistant | **KEEP / MODIFY** | Existing Netlify/Groq boundary is retained; AI-generated content is not trusted as moderation or verified listing data. |
+| `/scan/:slug` routes | **KEEP** | Existing route resolution remains; destination listing cards now come from the approved marketplace view. |
+| Project/API/security documentation | **KEEP / UPDATE** | Architecture, schema, API/setup, security and test docs describe implemented vs deployment-unverified behavior. |
+| Automated smoke tests | **KEEP / EXTEND** | Existing regression tests retained; database policy and admin endpoint tests added. |
+
+## Known boundaries
+
+- The marketplace schema has not been applied to a live Supabase project in this environment. Inspect and reconcile the target schema before deployment.
+- Email verification, recovery redirects, Storage policies and end-to-end vendor/admin flows require configured Supabase and Netlify environments for live validation.
+- The custom admin cookie and `admin_roles` record must be provisioned together; the server-only service-role key must never be exposed to the browser.
+- QR records are initialized as `planned`; no physical installation is represented.

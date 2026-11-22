@@ -16,13 +16,13 @@ const html = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
   "GhoomoUP processes no payment in this prototype"
 ].forEach((text) => assert(html.includes(text), `missing impact disclosure: ${text}`));
 
-assert(html.includes('id="confirmation-direct-impact-slot"'), "booking confirmation should include an impact slot");
-assert(html.includes('createDirectLocalImpactCard(impact, "booking")'), "booking confirmation should render its impact proof");
+assert(html.includes('id="confirmation-direct-impact-slot"'), "inquiry confirmation should include an impact slot");
+assert(html.includes('createDirectLocalImpactCard(impact, "inquiry")'), "inquiry confirmation should render its impact proof");
 assert(html.includes('createDirectLocalImpactCard(planImpact, "plan")'), "Yatra itinerary should render its impact proof");
 assert(html.includes("impactSnapshot"), "booking request should preserve its impact snapshot");
 
 const start = html.indexOf("const DIRECT_IMPACT_ROLE_LABELS");
-const end = html.indexOf("function migrateBuiltInListingPhotos", start);
+const end = html.indexOf("function initApp()", start);
 assert(start >= 0 && end > start, "impact calculation helpers should be present");
 
 const context = {};

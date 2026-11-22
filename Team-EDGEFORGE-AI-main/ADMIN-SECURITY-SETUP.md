@@ -1,29 +1,48 @@
 # Secure admin setup
 
-GhoomoUP admin authentication is independent of Supabase. The browser sends the entered user ID and password over HTTPS to `netlify/functions/admin-auth.js`. That function verifies salted hashes stored in Netlify environment variables and returns a signed four-hour session cookie with `HttpOnly`, `Secure` and `SameSite=Strict` flags.
+GhoomoUP admin authentication uses the existing Netlify function rather than Supabase Auth. The browser sends credentials over HTTPS to `netlify/functions/admin-auth.js`. The function verifies salted password hashes and returns a signed, expiring `HttpOnly`, `Secure`, `SameSite=Strict` cookie.
 
-The real user ID, password, hashes and session signing key must never be committed to GitHub or placed in frontend JavaScript.
+The moderation endpoint, `netlify/functions/admin-marketplace.js`, verifies the cookie signature/expiry and checks for a matching active `admin_roles` record before it uses the Supabase service-role key. Vendors cannot call admin operations from their dashboard or set their own listing to approved.
 
-## Required Netlify environment variables
+## Required configuration
+
+Configure these values in Netlify environment variables, never in the frontend or source control:
 
 | Variable | Purpose |
 | --- | --- |
-| `ADMIN_USER_ID_HASH` | SHA-256 hash of the admin user ID |
+| `ADMIN_USER_ID_HASH` | SHA-256 hash of the admin user ID; also used to provision the database role |
 | `ADMIN_PASSWORD_SALT` | Random salt used by scrypt |
-| `ADMIN_PASSWORD_HASH` | 64-byte scrypt output |
-| `ADMIN_SESSION_SECRET` | Random key used to sign session cookies |
-| `ADMIN_ALLOWED_ORIGINS` | Comma-separated trusted origins; set this to the deployed GhoomoUP site origin |
+| `ADMIN_PASSWORD_HASH` | scrypt output for the password and configured salt |
+| `ADMIN_SESSION_SECRET` | Random signing key for the session cookie |
+| `ADMIN_ALLOWED_ORIGINS` | Exact comma-separated trusted site origins |
+| `SUPABASE_URL` | Supabase project URL for the server function |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only key for protected moderation operations |
 
-Generate these values using a local secret-generation tool. Store the plain user ID and password only in a password manager. After setting the variables under **Netlify → Site configuration → Environment variables**, redeploy the site.
+Set Supabase browser URL and publishable/anon key through the existing frontend configuration. Never use the service-role key in browser code.
 
-## What the browser can and cannot see
+After inspecting and applying the marketplace migration, provision the administrator hash in Supabase SQL Editor:
 
-- The source contains only generic placeholders: `Enter your user ID` and `Enter password`.
-- The application never stores the submitted user ID or password in `localStorage`, `sessionStorage`, IndexedDB or a JavaScript-readable cookie.
-- The session cookie is signed and `HttpOnly`, so frontend JavaScript cannot read it.
-- Netlify environment variables and stored hashes are not returned to the browser.
-- A person controlling their own device can inspect values they personally type or view their own HTTPS request in Developer Tools. No website can prevent the device owner from inspecting their own browser. The security goal is to avoid publishing or persistently storing credentials client-side.
+```sql
+insert into public.admin_roles (admin_identifier_hash, role)
+values ('<ADMIN_USER_ID_HASH>', 'admin');
+```
 
-## Security boundary
+Use the value already configured in Netlify; do not commit it. An active matching row is required. Set `is_active = false` to revoke database authorization without changing the cookie signing secret.
 
-This hackathon prototype still stores listings and inquiries in each browser's `localStorage`, so moderation changes affect only that browser. Production must move these records to a shared database, authorize every write on the server, add rate limiting and keep an audit log. Supabase remains in this repository for vendor authentication and tourism feedback only.
+## Boundaries
+
+- The cookie is inaccessible to frontend JavaScript. As with any website, a device owner can inspect values they personally type and their own browser requests.
+- Admin session authorization is separate from vendor Supabase Auth.
+- Database RLS remains active. Admin read/write operations are performed server-side after role verification; the service role bypasses RLS and must remain tightly scoped to this function.
+- Keep origin checks, safe response errors and request bounds in place. Configure rate limiting at the hosting/WAF layer before public production use.
+- Contact and inquiry records may contain tourist PII; protect them from public reads and establish retention procedures before launch.
+
+## Deployment checklist
+
+1. Inspect the live schema before applying the additive migration; do not assume the deployed project matches this checkout.
+2. Confirm Supabase email-verification and password-recovery redirects include the deployed GhoomoUP origin.
+3. Configure the environment variables above and redeploy Netlify.
+4. Provision and verify the admin role hash.
+5. Test unauthorized, inactive-role, approved and rejected moderation calls in the deployed environment.
+
+No live Netlify or Supabase project was configured for the current development session, so deployment-side configuration remains unverified.

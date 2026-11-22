@@ -94,10 +94,10 @@ function verifyCredentials(userId, password) {
   return userMatches && passwordMatches;
 }
 
-function signSession() {
+function signSession(subjectHash) {
   const now = Math.floor(Date.now() / 1000);
   const payload = Buffer.from(JSON.stringify({
-    sub: "admin",
+    sub: subjectHash,
     iat: now,
     exp: now + SESSION_TTL_SECONDS,
     nonce: crypto.randomBytes(12).toString("base64url")
@@ -126,9 +126,20 @@ function verifySession(token) {
   try {
     const claims = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     const now = Math.floor(Date.now() / 1000);
-    return claims.sub === "admin" && Number.isInteger(claims.exp) && claims.exp > now;
+    return /^[a-f0-9]{64}$/.test(claims.sub) &&
+      Number.isInteger(claims.exp) && claims.exp > now;
   } catch (_error) {
     return false;
+  }
+}
+
+function getAdminSession(event) {
+  const token = readCookie(event, COOKIE_NAME);
+  if (!verifySession(token)) return null;
+  try {
+    return JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8"));
+  } catch (_error) {
+    return null;
   }
 }
 
@@ -198,6 +209,8 @@ exports.handler = async function (event) {
   return json(
     200,
     { authenticated: true, expiresIn: SESSION_TTL_SECONDS },
-    { "Set-Cookie": sessionCookie(signSession()) }
+    { "Set-Cookie": sessionCookie(signSession(crypto.createHash("sha256").update(userId, "utf8").digest("hex"))) }
   );
 };
+
+exports.getAdminSession = getAdminSession;

@@ -1615,6 +1615,11 @@
       .roadmap-kpis,
       .feedback-form-grid { grid-template-columns: 1fr; }
       .feedback-form-grid .full-width { grid-column: auto; }
+      #vendor-profile-form > div[style*="grid-template-columns"],
+      #vendor-signup-form > div[style*="grid-template-columns"],
+      #listing-submission-form > div[style*="grid-template-columns"] {
+        grid-template-columns: minmax(0, 1fr) !important;
+      }
     }
 
     @media (max-width: 720px) {
@@ -2430,8 +2435,47 @@
       </div>
 
       <div class="admin-sub-tabs">
+        <button class="admin-tab-btn" onclick="setVendorTab('profile')">🏪 Business Profile</button>
         <button class="admin-tab-btn active" onclick="setVendorTab('inquiries')">📩 My Inquiries (<span id="v-tab-inquiries-count">0</span>)</button>
         <button class="admin-tab-btn" onclick="setVendorTab('listings')">📋 My Listings (<span id="v-tab-listings-count">0</span>)</button>
+      </div>
+
+      <div id="vendor-view-profile" style="display: none;">
+        <form id="vendor-profile-form" onsubmit="handleVendorProfileSubmit(event)" style="max-width: 760px;">
+          <div class="form-group">
+            <label for="vendor-business-name">Business name *</label>
+            <input id="vendor-business-name" type="text" required maxlength="120">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="vendor-owner-name">Owner name *</label>
+              <input id="vendor-owner-name" type="text" required maxlength="100">
+            </div>
+            <div class="form-group">
+              <label for="vendor-default-category">Primary category</label>
+              <select id="vendor-default-category">
+                <option value="">Choose category</option>
+                <option value="guide">Local guides</option>
+                <option value="homestay">Homestays</option>
+                <option value="food">Food & traditional cuisine</option>
+                <option value="craft">Handicrafts & artisans</option>
+                <option value="culture">Cultural experiences</option>
+              </select>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div class="form-group">
+              <label for="vendor-contact-number">Contact number *</label>
+              <input id="vendor-contact-number" type="tel" required pattern="[+0-9 ()-]{10,18}" maxlength="18">
+            </div>
+            <div class="form-group">
+              <label for="vendor-whatsapp-number">WhatsApp number *</label>
+              <input id="vendor-whatsapp-number" type="tel" required pattern="[+0-9 ()-]{10,18}" maxlength="18">
+            </div>
+          </div>
+          <div id="vendor-profile-status" role="status" style="display:none; margin-bottom:12px;"></div>
+          <button type="submit" class="btn btn-primary">Save business profile</button>
+        </form>
       </div>
 
       <!-- Vendor Inquiries View -->
@@ -2464,7 +2508,8 @@
               <th>Category</th>
               <th>Price</th>
               <th>Status</th>
-              <th>Verification</th>
+              <th>Review feedback</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="vendor-listings-tbody">
@@ -2479,14 +2524,14 @@
       <div class="admin-panel-header">
         <h2><span>⚙️</span> Tourism Admin Moderation Dashboard</h2>
         <div style="display: flex; gap: 8px;">
-          <button class="btn btn-user-badge" onclick="resetDefaultSeedData()">🔄 Reset Demo Seed</button>
+          <button class="btn btn-user-badge" onclick="refreshAdminMarketplace()">↻ Refresh submissions</button>
           <button class="btn btn-user-badge" onclick="handleLogout()">Exit Admin Mode</button>
         </div>
       </div>
 
       <div class="admin-sub-tabs">
         <button class="admin-tab-btn active" onclick="setAdminTab('pending')">🔔 New — Needs Review (<span id="admin-tab-pending-count">0</span>)</button>
-        <button class="admin-tab-btn" onclick="setAdminTab('approved')">📋 All Active Listings (<span id="admin-tab-approved-count">0</span>)</button>
+        <button class="admin-tab-btn" onclick="setAdminTab('approved')">📋 Active & Inactive (<span id="admin-tab-approved-count">0</span>)</button>
         <button class="admin-tab-btn" onclick="setAdminTab('requests')">📩 Tourist Inquiries (<span id="admin-tab-requests-count">0</span>)</button>
       </div>
 
@@ -2505,6 +2550,7 @@
               <th>Price</th>
               <th>WhatsApp / Phone</th>
               <th>Specialty</th>
+              <th>Vendor</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -2523,8 +2569,9 @@
               <th>Title</th>
               <th>Category</th>
               <th>Destination</th>
-              <th>Rating</th>
-              <th>Verified</th>
+              <th>Status</th>
+              <th>Business</th>
+              <th>Review feedback</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -2550,6 +2597,9 @@
             <!-- Populated dynamically -->
           </tbody>
         </table>
+        <p id="admin-contact-clicks" style="color: var(--color-muted); font-size: 12px; margin-top: 10px;">
+          WhatsApp contact clicks are not confirmed bookings.
+        </p>
       </div>
     </div>
 
@@ -2792,9 +2842,13 @@
             <button class="category-pill-btn" data-category="craft" onclick="setCategory('craft')">
               🎨 Folk Crafts
             </button>
+            <button class="category-pill-btn" data-category="culture" onclick="setCategory('culture')">
+              🎭 Cultural Experiences
+            </button>
           </div>
           <div class="results-count" id="detail-results-count">Showing approved listings</div>
         </div>
+        <p id="marketplace-status" role="status" aria-live="polite" style="display:none; margin: 0 0 14px; color: var(--color-muted);"></p>
 
         <!-- Dynamic Listings Grid -->
         <div class="listings-grid" id="detail-listings-grid">
@@ -2862,11 +2916,33 @@
                 </a>
                 <button type="submit" id="v-login-submit-btn" class="btn btn-primary">Sign In</button>
               </div>
+              <div style="text-align: right; margin-top: 8px;">
+                <a href="#" onclick="handleVendorPasswordRecovery(); return false;" style="font-size: 12px; color: var(--color-teal);">Forgot password?</a>
+              </div>
 
               <div style="margin-top: 16px; padding-top: 10px; border-top: 1px dashed var(--color-border); text-align: center; font-size: 12px;">
                 <span style="color: var(--color-muted);">Site administrator?</span>
                 <a href="#" onclick="switchAuthTab('admin'); return false;" style="color: var(--color-terracotta); font-weight: 600; margin-left: 4px;">Open Admin Mode →</a>
               </div>
+            </form>
+            <form id="vendor-recovery-form" onsubmit="sendVendorPasswordRecovery(event)" style="display:none;">
+              <p>Enter your account email and we’ll send a secure password-reset link.</p>
+              <div class="form-group">
+                <label for="v-recovery-email">Email address *</label>
+                <input type="email" id="v-recovery-email" required autocomplete="email">
+              </div>
+              <div id="vendor-recovery-msg" role="status" style="display:none; margin-bottom:12px;"></div>
+              <button type="submit" class="btn btn-primary">Send reset link</button>
+              <button type="button" class="btn btn-user-badge" onclick="showVendorLoginForm()">Back to sign in</button>
+            </form>
+            <form id="vendor-password-update-form" onsubmit="handleVendorPasswordUpdate(event)" style="display:none;">
+              <p>Choose a new password for your account.</p>
+              <div class="form-group">
+                <label for="v-new-password">New password *</label>
+                <input type="password" id="v-new-password" required minlength="8" autocomplete="new-password">
+              </div>
+              <div id="vendor-password-update-msg" role="status" style="display:none; margin-bottom:12px;"></div>
+              <button type="submit" class="btn btn-primary">Update password</button>
             </form>
           </div>
 
@@ -2877,8 +2953,12 @@
             </p>
             <form id="vendor-signup-form" onsubmit="handleVendorSignupSubmit(event)">
               <div class="form-group">
-                <label for="v-signup-name">Business / Provider Full Name *</label>
-                <input type="text" id="v-signup-name" placeholder="e.g. Sunil Kumar (Simultala Guides)" required maxlength="60">
+                <label for="v-signup-name">Business name *</label>
+                <input type="text" id="v-signup-name" placeholder="e.g. Kashi Heritage Walks" required maxlength="120">
+              </div>
+              <div class="form-group">
+                <label for="v-signup-owner-name">Owner name *</label>
+                <input type="text" id="v-signup-owner-name" placeholder="Your full name" required maxlength="100">
               </div>
               <div class="form-group">
                 <label for="v-signup-email">Email Address *</label>
@@ -2886,12 +2966,17 @@
               </div>
               <div class="form-group">
                 <label for="v-signup-password">Password (min 6 characters) *</label>
-                <input type="password" id="v-signup-password" placeholder="Create a password" required minlength="6" autocomplete="new-password">
+                <input type="password" id="v-signup-password" placeholder="Create a password" required minlength="8" autocomplete="new-password">
               </div>
-              <div class="form-group">
-                <label for="v-signup-phone">Phone / WhatsApp Number (Contact Only) *</label>
-                <input type="tel" id="v-signup-phone" placeholder="e.g. 9123456780" required pattern="[0-9]{10,12}" maxlength="12">
-                <div class="form-hint">Public business contact number for tourist calls and WhatsApp inquiries (not used for login).</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-group">
+                  <label for="v-signup-phone">Contact phone *</label>
+                  <input type="tel" id="v-signup-phone" placeholder="+91 98765 43210" required pattern="[+0-9 ()-]{10,18}" maxlength="18">
+                </div>
+                <div class="form-group">
+                  <label for="v-signup-whatsapp">WhatsApp number *</label>
+                  <input type="tel" id="v-signup-whatsapp" placeholder="+91 98765 43210" required pattern="[+0-9 ()-]{10,18}" maxlength="18">
+                </div>
               </div>
               <div class="form-group" style="background: var(--color-sand); padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); margin-top: 8px;">
                 <label for="v-signup-captcha" id="v-signup-captcha-label" style="font-weight: 700; color: var(--color-charcoal); margin-bottom: 4px; font-size: 12.5px;">
@@ -3026,10 +3111,10 @@
         <div style="text-align: center; margin-bottom: 12px;">
           <div style="font-size: 38px; line-height: 1; margin-bottom: 6px;">🎉</div>
           <h4 style="font-family: 'Playfair Display', serif; font-size: 18px; color: var(--color-charcoal);">
-            Inquiry saved on this device
+          Inquiry details
           </h4>
           <p style="font-size: 12.5px; color: var(--color-muted);">
-            Reference ID: <strong id="conf-ref-id" style="color: var(--color-teal);">GB-2026-0000</strong>
+            Reference ID: <strong id="conf-ref-id" style="color: var(--color-teal);">GU-0000</strong>
           </p>
         </div>
 
@@ -3063,7 +3148,7 @@
         <div id="confirmation-direct-impact-slot"></div>
 
         <p style="font-size: 12.5px; color: var(--color-muted); margin-bottom: 18px; text-align: center;">
-          Your details are stored only in this browser. Send the message on WhatsApp to contact the provider directly.
+          A contact click is not a confirmed booking. Send the message on WhatsApp to reach the provider directly.
         </p>
 
         <div class="form-actions" style="justify-content: center; gap: 10px;">
@@ -3120,31 +3205,29 @@
           
           <div class="form-group">
             <label for="listing-title">Listing / Service Title *</label>
-            <input type="text" id="listing-title" placeholder="e.g. Gidhaur Minto Tower Guided Walk" required maxlength="70">
+            <input type="text" id="listing-title" placeholder="e.g. Kashi Heritage Walking Tour" required maxlength="100">
           </div>
 
-          <!-- Photo Upload Field (Base64 conversion) -->
           <div class="form-group">
-            <label for="listing-photo-file">Listing Photo (Auto-displays on card) *</label>
-            <input type="file" id="listing-photo-file" accept="image/*" onchange="handlePhotoUploadPreview(event)">
+            <label for="listing-photo-file">Business photograph</label>
+            <input type="file" id="listing-photo-file" accept="image/jpeg,image/png,image/webp" onchange="handlePhotoUploadPreview(event)">
             <div id="photo-preview-wrap" style="margin-top: 8px; display: none;">
               <img id="photo-preview-img" src="" alt="Preview" style="height: 90px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
             </div>
-            <div class="form-hint">Upload a high-quality photo of your stay, tour, delicacy, or craft.</div>
+            <div class="form-hint">JPEG, PNG or WebP; up to 5 MB per image. Images are private until the listing is approved.</div>
           </div>
 
           <!-- Category Selection with "Other" Option -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
               <label for="listing-category">Service Category *</label>
-              <select id="listing-category" onchange="handleCategoryChange()" required>
+                <select id="listing-category" onchange="handleCategoryChange()" required>
                 <option value="guide">🧭 Local Guide</option>
                 <option value="homestay">🏡 Homestay</option>
                 <option value="food">🍲 Food & Sweets</option>
                 <option value="craft">🎨 Folk Craft & Souvenirs</option>
-                <option value="other">✨ Other (please specify)</option>
+                <option value="culture">🎭 Cultural Experiences</option>
               </select>
-              <input type="text" id="listing-category-other" placeholder="Specify custom category" style="display: none; margin-top: 6px;" maxlength="40">
             </div>
 
             <!-- Destination Selection with "Other" Option -->
@@ -3154,38 +3237,40 @@
                 <option value="varanasi">🪔 Varanasi</option>
                 <option value="ayodhya">🛕 Ayodhya</option>
                 <option value="prayagraj">🌊 Prayagraj</option>
-                <option value="other">📍 Other (please specify)</option>
               </select>
-              <input type="text" id="listing-site-other" placeholder="Specify destination name" style="display: none; margin-top: 6px;" maxlength="40">
             </div>
           </div>
 
           <div class="form-group">
             <label for="listing-desc">Description & Experience Details *</label>
-            <textarea id="listing-desc" rows="3" placeholder="Describe your service, experience, local knowledge, or heritage authenticity..." required maxlength="300"></textarea>
+            <textarea id="listing-desc" rows="3" placeholder="Describe your service and local experience..." required minlength="20" maxlength="2000"></textarea>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
-              <label for="listing-price">Indicative Price (INR) *</label>
-              <input type="text" id="listing-price" placeholder="e.g. ₹500/tour or ₹1,200/night" required maxlength="30">
+              <label for="listing-address">Business address</label>
+              <input type="text" id="listing-address" maxlength="300">
             </div>
             <div class="form-group">
-              <label for="listing-whatsapp">WhatsApp Phone Number *</label>
-              <input type="tel" id="listing-whatsapp" placeholder="e.g. 919876543210" required maxlength="15">
+              <label for="listing-service-area">Service area</label>
+              <input type="text" id="listing-service-area" maxlength="300">
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
             <div class="form-group">
-              <label for="listing-hours">Operating Hours (24h format) *</label>
-              <input type="text" id="listing-hours" placeholder="e.g. 06:00-18:00 or 24 Hours" required maxlength="25">
+              <label for="listing-price">Price information (optional)</label>
+              <input type="text" id="listing-price" placeholder="e.g. From ₹500 per tour" maxlength="200">
+            </div>
+            <div class="form-group">
+              <label for="listing-hours">Operating hours (optional)</label>
+              <input type="text" id="listing-hours" placeholder="e.g. 06:00-18:00" maxlength="120">
             </div>
             
             <!-- Dynamic Category-Specific Datalist Suggestions -->
             <div class="form-group">
               <label for="listing-specialty">Specialty Highlight *</label>
-              <input type="text" id="listing-specialty" list="specialty-suggestions-datalist" placeholder="Select or type specialty" required maxlength="50">
+              <input type="text" id="listing-specialty" list="specialty-suggestions-datalist" placeholder="e.g. Heritage walks" maxlength="120">
               <datalist id="specialty-suggestions-datalist">
                 <!-- Dynamically populated based on chosen category -->
               </datalist>
@@ -3194,8 +3279,10 @@
 
           <div class="form-actions">
             <button type="button" class="btn btn-user-badge" onclick="closeListingModal()">Cancel</button>
-            <button type="submit" class="btn btn-primary">Submit for Admin Approval</button>
+            <button type="button" class="btn btn-user-badge" onclick="saveListingDraft()">Save draft</button>
+            <button type="submit" class="btn btn-primary">Submit for approval</button>
           </div>
+          <p id="listing-form-status" role="status" style="display:none; margin-top: 10px;"></p>
         </form>
       </div>
     </div>
@@ -3425,6 +3512,7 @@
        JAVASCRIPT APPLICATION ENGINE
        ========================================================================== -->
   <script src="assets/destinations.js"></script>
+  <script src="assets/marketplace-api.js"></script>
   <script>
     // --- 0. SUPABASE CLIENT INITIALIZATION ---
     const SUPABASE_URL = "https://rbvspugzkpjfscweuykh.supabase.co";
@@ -3795,9 +3883,18 @@
     let currentVendor = null;
     let isAdminActive = false;
     let travelerProfile = null;
-    let uploadedPhotoBase64 = "";
     let tourismFeedback = [];
     let remoteExpansionSignals = null;
+    let vendorProfile = null;
+    let vendorListings = [];
+    let vendorInquiries = [];
+    let adminListings = [];
+    let adminInquiries = [];
+    let marketplaceLoaded = false;
+    let marketplaceLoading = true;
+    let marketplaceError = "";
+    let editingListingId = null;
+    let pendingListingPhoto = null;
 
     // --- 3. SANITIZATION HELPER ---
     function sanitizeHTML(str) {
@@ -3841,7 +3938,7 @@
       };
     }
 
-    function createDirectLocalImpactCard(impact, contextLabel = "booking") {
+    function createDirectLocalImpactCard(impact, contextLabel = "inquiry") {
       const safeImpact = impact || { amount: 0, roles: ["local provider"], verified: false };
       const card = document.createElement("section");
       card.className = "direct-impact-card";
@@ -3854,7 +3951,7 @@
         <div class="direct-impact-body">
           <div class="direct-impact-contact">🤝 100% direct vendor contact — no middleman commission</div>
           <div class="direct-impact-row">
-            <span class="direct-impact-label">This ${contextLabel === "plan" ? "plan" : "booking"} supports:</span>
+            <span class="direct-impact-label">This ${contextLabel === "plan" ? "plan" : "inquiry"} supports:</span>
             <span class="direct-impact-value">${safeImpact.roles.map(role => sanitizeHTML(role)).join(" + ")}</span>
           </div>
           <div class="direct-impact-row">
@@ -3871,61 +3968,10 @@
       return card;
     }
 
-    function migrateBuiltInListingPhotos() {
-      const photoByListingId = {
-        "jamui-g-01": "assets/jamui_gidhaur_heritage_walk.jpeg",
-        "jamui-h-01": "assets/jamui_simultala_homestay.jpeg",
-        "jamui-f-01": "assets/jamui_chhena_sweets.jpeg",
-        "jamui-c-01": "assets/jamui_patneshwar_crafts.jpeg",
-        "jamui-g-02": "assets/jamui_nagi_nakti_bird_guide.jpeg",
-        "bg-g-01": "assets/bodhgaya_mahabodhi_scholar_walk.jpeg",
-        "bg-h-01": "assets/bodhgaya_sujata_homestay.jpeg",
-        "bg-f-01": "assets/bodhgaya_litti_chokha.jpeg",
-        "bg-c-01": "assets/bodhgaya_bodhi_leaf_art.jpeg",
-        "nl-g-01": "assets/nalanda_ruins.jpeg",
-        "nl-f-01": "assets/silao_khaja.jpeg",
-        "nl-c-01": "assets/bawan_buti_weaving.jpeg",
-        "sp-g-01": "assets/sonepur_fair_heritage_walk.jpeg",
-        "sp-f-01": "assets/sonepur_jalebi_chai.jpeg",
-        "sp-c-01": "assets/sonepur_brass_bells.jpeg",
-        "cg-g-01": "assets/chhath_patliputra_boat_tour.jpeg",
-        "cg-f-01": "assets/chhath_thekua_anarsa.jpeg",
-        "cg-c-01": "assets/chhath_madhubani_soop.jpeg"
-      };
-
-      if (!Array.isArray(listings)) return;
-
-      let changed = false;
-      listings = listings.map((listing) => {
-        const updatedPhoto = photoByListingId[listing.id];
-        if (!updatedPhoto || listing.photo === updatedPhoto) return listing;
-
-        changed = true;
-        return { ...listing, photo: updatedPhoto };
-      });
-
-      if (changed) {
-        localStorage.setItem("ghoomoup_listings", JSON.stringify(listings));
-      }
-    }
-
     // --- 4. INITIALIZATION ---
     function initApp() {
-      // Load listings
-      const savedListings = localStorage.getItem("ghoomoup_listings");
-      if (savedListings) {
-        try {
-          listings = JSON.parse(savedListings);
-        } catch (e) {
-          listings = [...DEFAULT_LISTINGS];
-        }
-      } else {
-        listings = [...DEFAULT_LISTINGS];
-        saveListings();
-      }
-
-      // Keep existing browsers in sync when built-in listing artwork changes.
-      migrateBuiltInListingPhotos();
+      listings = [];
+      loadPublicListings();
 
       // Check traveler profile
       const savedTraveler = localStorage.getItem("ghoomoup_traveler_profile");
@@ -3966,20 +4012,27 @@
       }, 60000);
     }
 
-    function saveListings() {
-      localStorage.setItem("ghoomoup_listings", JSON.stringify(listings));
-      renderAdminTables();
-      renderVendorDashboard();
-    }
-
-    function resetDefaultSeedData() {
-      if (confirm("Reset all locally stored listings? No sample providers are included.")) {
-        listings = [...DEFAULT_LISTINGS];
-        saveListings();
+    async function loadPublicListings() {
+      const client = getSupabaseClient();
+      if (!client || !window.GhoomoMarketplace) {
+        marketplaceLoading = false;
+        marketplaceError = "Marketplace service is not configured. Please try again later.";
         renderDetailListings();
-        renderAdminTables();
-        renderVendorDashboard();
-        showToast("🔄 Local listings have been reset.");
+        return;
+      }
+
+      marketplaceLoading = true;
+      marketplaceError = "";
+      renderDetailListings();
+      try {
+        listings = await window.GhoomoMarketplace.fetchPublicListings(client);
+        marketplaceLoaded = true;
+      } catch (error) {
+        marketplaceError = "Local services could not be loaded. Please refresh to try again.";
+        console.error("Public marketplace load failed:", error.message);
+      } finally {
+        marketplaceLoading = false;
+        renderDetailListings();
       }
     }
 
@@ -4182,7 +4235,22 @@
     // --- 6. RENDER LISTINGS (WITH DYNAMIC STATUS, PHOTO, VISIBLE PHONE, CATEGORY FILTER) ---
     function renderDetailListings() {
       const grid = document.getElementById("detail-listings-grid");
+      const status = document.getElementById("marketplace-status");
       grid.innerHTML = "";
+      if (marketplaceLoading) {
+        status.textContent = "Loading approved local services…";
+        status.style.display = "block";
+      } else if (marketplaceError) {
+        status.textContent = marketplaceError;
+        status.style.display = "block";
+      } else {
+        status.textContent = "";
+        status.style.display = "none";
+      }
+      if (marketplaceLoading || marketplaceError) {
+        document.getElementById("detail-results-count").textContent = "";
+        return;
+      }
 
       const filtered = listings.filter(item => {
         const matchesSite = item.site === currentSite;
@@ -4212,9 +4280,10 @@
         const card = document.createElement("div");
         card.className = "listing-card";
 
-        const cleanPhone = item.whatsapp.replace(/\D/g, "");
+        const cleanPhone = (item.whatsapp || item.phone || "").replace(/\D/g, "");
+        if (!cleanPhone) return;
         const waText = encodeURIComponent(
-          `Namaste! I found "${item.title}" on GhoomoUP (${siteName}). I would like to inquire about your ${item.category} service (Price: ${item.price}). Please share availability.`
+          `Hello, I discovered your service through GhoomoUP. I am interested in learning more about your offering.\n\nService: ${item.title}\nDestination: ${siteName}`
         );
         const waUrl = `https://wa.me/${cleanPhone}?text=${waText}`;
 
@@ -4223,8 +4292,7 @@
         const price = sanitizeHTML(item.price);
         const hours = sanitizeHTML(item.openHours);
         const specialty = sanitizeHTML(item.specialty);
-        const rating = item.rating ? Number(item.rating).toFixed(1) : "4.8";
-        const displayPhone = sanitizeHTML(item.whatsapp);
+        const displayPhone = sanitizeHTML(item.whatsapp || item.phone);
         const cardPhoto = item.photo || SITE_METADATA[item.site]?.image || "assets/varanasi-illustration.svg";
 
         const categoryIcons = {
@@ -4246,21 +4314,21 @@
                   <span class="status-badge ${statusObj.cssClass}">
                     <span class="status-dot"></span> ${statusObj.label}
                   </span>
-                  ${item.verified ? '<span class="verified-badge">✓ Verified</span>' : '<span class="direct-impact-status pending">⏳ Pending verification</span>'}
-                  <span class="rating-badge">★ ${rating}</span>
+                  ${item.verified ? '<span class="verified-badge">✓ Approved</span>' : '<span class="direct-impact-status pending">⏳ Pending review</span>'}
                 </div>
               </div>
 
               <h3 class="card-title">${title}</h3>
               ${specialty ? `<div class="card-specialty"><span>🌿</span> ${specialty}</div>` : ''}
               <p class="card-desc">${desc}</p>
+              ${item.address || item.serviceArea ? `<p class="card-desc" style="font-size:12px;">📍 ${sanitizeHTML(item.address || item.serviceArea)}</p>` : ''}
             </div>
 
             <div>
               <!-- Plain Visible Phone Contact Row -->
               <div class="card-contact-row">
                 <span>📞</span>
-                <span>Direct Host Contact: <a href="tel:${cleanPhone}">+${displayPhone}</a></span>
+                <span>Direct Host Contact: <a href="tel:${cleanPhone}">${displayPhone}</a></span>
               </div>
 
               <div class="card-info-row">
@@ -4269,7 +4337,7 @@
               </div>
 
               <div class="card-actions">
-                <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn-whatsapp">
+                <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn-whatsapp" onclick="trackWhatsAppClick('${item.id}', 'qr')">
                   <span>💬</span> WhatsApp
                 </a>
                 <button class="btn-package" onclick="openPackageModal('${item.id}', '${escapeAttr(title)}', '${escapeAttr(price)}', '${escapeAttr(displayPhone)}', '${item.site}')">
@@ -4292,7 +4360,6 @@
       if (isAdminActive) return;
       if (!user || (!user.email_confirmed_at && !user.confirmed_at)) {
         currentVendor = null;
-        localStorage.removeItem("ghoomoup_current_vendor");
         updateAuthHeaderUI();
         return;
       }
@@ -4300,13 +4367,13 @@
       const meta = user.user_metadata || {};
       currentVendor = {
         id: user.id,
-        name: meta.name || (user.email ? user.email.split("@")[0] : "Vendor"),
+        name: meta.business_name || meta.name || (user.email ? user.email.split("@")[0] : "Vendor"),
         phone: meta.phone || "",
+        whatsapp: meta.whatsapp_number || meta.phone || "",
         email: user.email
       };
-      localStorage.setItem("ghoomoup_current_vendor", JSON.stringify(currentVendor));
+      refreshVendorMarketplace();
       updateAuthHeaderUI();
-      renderVendorDashboard();
     }
 
     async function initSupabaseAuth() {
@@ -4316,9 +4383,13 @@
         sb.auth.onAuthStateChange((event, session) => {
           if (event === "SIGNED_IN" && session && session.user) {
             applyAuthenticatedUser(session.user);
+          } else if (event === "PASSWORD_RECOVERY") {
+            showPasswordUpdateForm();
           } else if (event === "SIGNED_OUT") {
             currentVendor = null;
-            localStorage.removeItem("ghoomoup_current_vendor");
+            vendorProfile = null;
+            vendorListings = [];
+            vendorInquiries = [];
             document.getElementById("vendor-dashboard").classList.remove("active");
             updateAuthHeaderUI();
           }
@@ -4329,13 +4400,11 @@
           applyAuthenticatedUser(session.user);
         } else {
           currentVendor = null;
-          localStorage.removeItem("ghoomoup_current_vendor");
           updateAuthHeaderUI();
         }
       } catch (err) {
         console.warn("Supabase auth check notice:", err.message);
         currentVendor = null;
-        localStorage.removeItem("ghoomoup_current_vendor");
         updateAuthHeaderUI();
       }
     }
@@ -4363,6 +4432,7 @@
       switchAuthTab(defaultTab);
       document.getElementById("vendor-login-section").style.display = "block";
       document.getElementById("vendor-signup-section").style.display = "none";
+      showVendorLoginForm();
       const loginMsg = document.getElementById("vendor-login-msg");
       if (loginMsg) loginMsg.style.display = "none";
       const signupMsg = document.getElementById("vendor-signup-msg");
@@ -4408,11 +4478,101 @@
       generateMathCaptcha();
     }
 
+    function showVendorLoginForm() {
+      document.getElementById("vendor-login-form").style.display = "block";
+      document.getElementById("vendor-recovery-form").style.display = "none";
+      document.getElementById("vendor-password-update-form").style.display = "none";
+    }
+
+    function handleVendorPasswordRecovery() {
+      const emailInput = document.getElementById("v-recovery-email");
+      emailInput.value = document.getElementById("v-login-email").value.trim();
+      document.getElementById("vendor-login-form").style.display = "none";
+      document.getElementById("vendor-recovery-form").style.display = "block";
+      document.getElementById("vendor-password-update-form").style.display = "none";
+    }
+
+    async function sendVendorPasswordRecovery(event) {
+      event.preventDefault();
+      const message = document.getElementById("vendor-recovery-msg");
+      const client = getSupabaseClient();
+      if (!client) {
+        message.textContent = "Authentication service is unavailable.";
+        message.style.display = "block";
+        return;
+      }
+      const email = document.getElementById("v-recovery-email").value.trim();
+      try {
+        const { error } = await client.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/`
+        });
+        if (error) {
+          console.error("Password recovery request failed:", error.message);
+          message.textContent = "Could not send a reset email. Check the address and try again.";
+          message.style.color = "var(--color-terracotta)";
+        } else {
+          message.textContent = "If an account exists for that address, a password-reset link has been sent.";
+          message.style.color = "#137333";
+        }
+      } catch (error) {
+        console.error("Password recovery request failed:", error.message);
+        message.textContent = "The reset service could not be reached. Please try again.";
+        message.style.color = "var(--color-terracotta)";
+      }
+      message.style.display = "block";
+    }
+
+    function showPasswordUpdateForm() {
+      document.getElementById("unified-auth-modal").classList.add("active");
+      document.getElementById("vendor-login-section").style.display = "block";
+      document.getElementById("vendor-login-form").style.display = "none";
+      document.getElementById("vendor-recovery-form").style.display = "none";
+      document.getElementById("vendor-password-update-form").style.display = "block";
+      switchAuthTab("vendor");
+    }
+
+    async function handleVendorPasswordUpdate(event) {
+      event.preventDefault();
+      const message = document.getElementById("vendor-password-update-msg");
+      const password = document.getElementById("v-new-password").value;
+      if (password.length < 8) {
+        message.textContent = "Use a password with at least 8 characters.";
+        message.style.display = "block";
+        return;
+      }
+      const client = getSupabaseClient();
+      if (!client) {
+        message.textContent = "Authentication service is unavailable. Request a new reset link later.";
+        message.style.color = "var(--color-terracotta)";
+        message.style.display = "block";
+        return;
+      }
+      try {
+        const { error } = await client.auth.updateUser({ password });
+        if (error) {
+          console.error("Password update failed:", error.message);
+          message.textContent = "Password could not be updated. Request a new reset link and try again.";
+          message.style.color = "var(--color-terracotta)";
+          message.style.display = "block";
+          return;
+        }
+      } catch (error) {
+        console.error("Password update failed:", error.message);
+        message.textContent = "The password service could not be reached. Please try again.";
+        message.style.color = "var(--color-terracotta)";
+        message.style.display = "block";
+        return;
+      }
+      document.getElementById("v-new-password").value = "";
+      closeUnifiedAuthModal();
+      showToast("Your password was updated.");
+    }
+
     // Business/Vendor Login with Supabase Email/Password
     async function handleVendorLoginSubmit(e) {
       e.preventDefault();
       const email = sanitizeHTML((document.getElementById("v-login-email").value || "").trim());
-      const password = (document.getElementById("v-login-password").value || "").trim();
+      const password = document.getElementById("v-login-password").value || "";
       const msgDiv = document.getElementById("vendor-login-msg");
       const enteredCaptcha = parseInt((document.getElementById("v-login-captcha").value || "").trim());
       const submitBtn = document.getElementById("v-login-submit-btn");
@@ -4463,12 +4623,12 @@
         const meta = (data.user && data.user.user_metadata) || {};
         currentVendor = {
           id: data.user.id,
-          name: meta.name || (data.user.email ? data.user.email.split("@")[0] : "Vendor"),
+          name: meta.business_name || meta.name || (data.user.email ? data.user.email.split("@")[0] : "Vendor"),
           phone: meta.phone || "",
+          whatsapp: meta.whatsapp_number || meta.phone || "",
           email: data.user.email
         };
         isAdminActive = false;
-        localStorage.setItem("ghoomoup_current_vendor", JSON.stringify(currentVendor));
 
         updateAuthHeaderUI();
         closeUnifiedAuthModal();
@@ -4476,7 +4636,7 @@
 
         document.getElementById("vendor-dashboard").classList.add("active");
         document.getElementById("admin-panel").classList.remove("active");
-        renderVendorDashboard();
+        await refreshVendorMarketplace();
         document.getElementById("vendor-dashboard").scrollIntoView({ behavior: 'smooth' });
       } catch (err) {
         msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Network error. Please try again.</span>`;
@@ -4530,15 +4690,38 @@
       throw lastError || new Error("Admin authentication request failed.");
     }
 
+    async function fetchAdminMarketplace(options = {}) {
+      const response = await fetch("/.netlify/functions/admin-marketplace", {
+        credentials: "same-origin",
+        cache: "no-store",
+        ...options
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Marketplace admin request failed.");
+      return payload;
+    }
+
     function activateAdminDashboard() {
       isAdminActive = true;
       currentVendor = null;
-      localStorage.removeItem("ghoomoup_current_vendor");
       updateAuthHeaderUI();
       closeUnifiedAuthModal();
       document.getElementById("vendor-dashboard").classList.remove("active");
       document.getElementById("admin-panel").classList.add("active");
-      renderAdminTables();
+      refreshAdminMarketplace();
+    }
+
+    async function refreshAdminMarketplace() {
+      if (!isAdminActive) return;
+      try {
+        const data = await fetchAdminMarketplace({ method: "GET" });
+        adminListings = data.listings || [];
+        adminInquiries = data.inquiries || [];
+        renderAdminTables();
+      } catch (error) {
+        console.error("Admin marketplace load failed:", error.message);
+        showToast("Admin marketplace data could not be loaded. Refresh and try again.");
+      }
     }
 
     async function initAdminSession() {
@@ -4596,8 +4779,10 @@
       e.preventDefault();
       const name = sanitizeHTML((document.getElementById("v-signup-name").value || "").trim());
       const email = sanitizeHTML((document.getElementById("v-signup-email").value || "").trim());
-      const password = (document.getElementById("v-signup-password").value || "").trim();
+      const password = document.getElementById("v-signup-password").value || "";
+      const ownerName = sanitizeHTML((document.getElementById("v-signup-owner-name").value || "").trim());
       const phone = sanitizeHTML((document.getElementById("v-signup-phone").value || "").trim());
+      const whatsapp = sanitizeHTML((document.getElementById("v-signup-whatsapp").value || "").trim());
       const enteredCaptcha = parseInt((document.getElementById("v-signup-captcha").value || "").trim());
       const msgDiv = document.getElementById("vendor-signup-msg");
       const submitBtn = document.getElementById("v-signup-submit-btn");
@@ -4610,14 +4795,14 @@
         return;
       }
 
-      if (!name || !email || !password) {
-        msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Please fill in all required fields.</span>`;
+      if (!name || !ownerName || !email || !password || !isValidBusinessPhone(phone) || !isValidBusinessPhone(whatsapp)) {
+        msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Enter the business and owner names, a valid email, and valid contact and WhatsApp numbers.</span>`;
         msgDiv.style.display = "block";
         return;
       }
 
-      if (password.length < 6) {
-        msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Password must be at least 6 characters long.</span>`;
+      if (password.length < 8) {
+        msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Password must be at least 8 characters long.</span>`;
         msgDiv.style.display = "block";
         return;
       }
@@ -4638,8 +4823,13 @@
           password: password,
           options: {
             data: {
-              name: name,
-              phone: phone
+              account_type: "vendor",
+              name: ownerName,
+              owner_name: ownerName,
+              business_name: name,
+              phone,
+              contact_number: phone,
+              whatsapp_number: whatsapp
             },
             emailRedirectTo: window.location.origin
           }
@@ -4651,7 +4841,7 @@
           if (errStr.includes("already registered") || errStr.includes("already exists")) {
             msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">An account with this email is already registered. Please <a href="#" onclick="toggleVendorSignupView(false); return false;" style="font-weight:700; text-decoration:underline;">sign in</a>.</span>`;
           } else if (errStr.includes("password")) {
-            msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Password is too weak. Please use at least 6 characters.</span>`;
+            msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Password is too weak. Please use at least 8 characters.</span>`;
           } else {
             msgDiv.innerHTML = `<span style="color: var(--color-terracotta);">Registration failed. Please check your details and try again.</span>`;
           }
@@ -4659,7 +4849,6 @@
           return;
         }
 
-        // Always ensure user is not automatically logged in
         if (sb) {
           await sb.auth.signOut();
         }
@@ -4723,8 +4912,10 @@
       }
 
       currentVendor = null;
+      vendorProfile = null;
+      vendorListings = [];
+      vendorInquiries = [];
       isAdminActive = false;
-      localStorage.removeItem("ghoomoup_current_vendor");
 
       document.getElementById("vendor-dashboard").classList.remove("active");
       document.getElementById("admin-panel").classList.remove("active");
@@ -4845,72 +5036,110 @@
 
     // --- 8. VENDOR "MY INQUIRIES" & LISTINGS DASHBOARD ---
     function setVendorTab(tab) {
-      document.querySelectorAll("#vendor-dashboard .admin-tab-btn").forEach((btn, idx) => {
-        btn.classList.toggle("active", (idx === 0 && tab === 'inquiries') || (idx === 1 && tab === 'listings'));
+      document.querySelectorAll("#vendor-dashboard .admin-tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("onclick").includes(`'${tab}'`));
       });
+      document.getElementById("vendor-view-profile").style.display = tab === "profile" ? "block" : "none";
       document.getElementById("vendor-view-inquiries").style.display = tab === 'inquiries' ? 'block' : 'none';
       document.getElementById("vendor-view-listings").style.display = tab === 'listings' ? 'block' : 'none';
+    }
+
+    async function refreshVendorMarketplace() {
+      if (!currentVendor) return;
+      const client = getSupabaseClient();
+      if (!client || !window.GhoomoMarketplace) return;
+      try {
+        const [profile, ownListings, inquiryResult] = await Promise.all([
+          window.GhoomoMarketplace.fetchVendorProfile(client, currentVendor.id),
+          window.GhoomoMarketplace.fetchVendorListings(client, currentVendor.id),
+          client.from("inquiries")
+            .select("id,listing_id,event_type,tourist_name,tourist_phone,message,source,created_at,listing:listings!inner(title,vendor_id)")
+            .eq("event_type", "inquiry")
+            .eq("listing.vendor_id", currentVendor.id)
+            .order("created_at", { ascending: false })
+        ]);
+        if (inquiryResult.error) throw inquiryResult.error;
+        vendorProfile = profile;
+        vendorListings = ownListings;
+        vendorInquiries = inquiryResult.data || [];
+        if (profile) {
+          currentVendor.name = profile.business_name;
+          currentVendor.phone = profile.contact_number;
+          currentVendor.whatsapp = profile.whatsapp_number;
+        }
+      } catch (error) {
+        console.error("Vendor dashboard load failed:", error.message);
+        const status = document.getElementById("vendor-profile-status");
+        status.textContent = "Your business data could not be loaded. Refresh and try again.";
+        status.style.color = "var(--color-terracotta)";
+        status.style.display = "block";
+      }
+      updateAuthHeaderUI();
+      renderVendorDashboard();
     }
 
     function renderVendorDashboard() {
       if (!currentVendor) return;
       document.getElementById("v-dash-name").textContent = currentVendor.name;
-
-      const vendorListings = listings.filter(l => 
-        l.submittedBy === currentVendor.name || 
-        l.whatsapp.replace(/\D/g, "") === currentVendor.phone.replace(/\D/g, "")
-      );
       document.getElementById("v-tab-listings-count").textContent = vendorListings.length;
+      document.getElementById("v-tab-inquiries-count").textContent = vendorInquiries.length;
+
+      if (vendorProfile) {
+        document.getElementById("vendor-business-name").value = vendorProfile.business_name || "";
+        document.getElementById("vendor-owner-name").value = vendorProfile.owner_name || "";
+        document.getElementById("vendor-contact-number").value = vendorProfile.contact_number || "";
+        document.getElementById("vendor-whatsapp-number").value = vendorProfile.whatsapp_number || "";
+        document.getElementById("vendor-default-category").value = vendorProfile.default_category || "";
+      }
 
       const listingsTbody = document.getElementById("vendor-listings-tbody");
       if (vendorListings.length === 0) {
-        listingsTbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--color-muted); padding: 18px;">You haven't submitted any listings yet. Click "+ Submit New Listing" above!</td></tr>`;
+        listingsTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-muted); padding: 18px;">You have no listings yet. Create a draft to get started.</td></tr>`;
       } else {
-        listingsTbody.innerHTML = vendorListings.map(item => `
+        listingsTbody.innerHTML = vendorListings.map(item => {
+          const image = (item.images || [])[0];
+          const statusLabels = {
+            DRAFT: "Draft",
+            PENDING: "Awaiting review",
+            APPROVED: "Approved and public",
+            REJECTED: "Changes requested",
+            INACTIVE: "Inactive"
+          };
+          return `
           <tr>
-            <td><img src="${item.photo || 'assets/varanasi-illustration.svg'}" class="table-thumbnail" alt="Provider listing"></td>
+            <td>${image ? `<img src="${escapeAttr(image.url)}" class="table-thumbnail" alt="${escapeAttr(image.alt_text || item.title)}">` : "—"}</td>
             <td><strong>${sanitizeHTML(item.title)}</strong></td>
-            <td>${SITE_METADATA[item.site]?.name || item.site}</td>
-            <td><span class="category-tag">${item.category}</span></td>
-            <td>${sanitizeHTML(item.price)}</td>
+            <td>${sanitizeHTML(item.site_name || item.site_code || "")}</td>
+            <td><span class="category-tag">${sanitizeHTML(item.category)}</span></td>
+            <td>${sanitizeHTML(item.price_information || "Ask provider")}</td>
             <td>
-              <span style="font-weight: 700; color: ${item.status === 'approved' ? '#137333' : '#B06000'};">
-                ${item.status === 'approved' ? '🟢 Live' : '⏳ Pending Review'}
+              <span style="font-weight: 700; color: ${item.status === 'APPROVED' ? '#137333' : '#B06000'};">
+                ${statusLabels[item.status] || sanitizeHTML(item.status)}
               </span>
             </td>
-            <td>${item.verified ? '<span class="verified-badge">✓ Verified</span>' : '—'}</td>
+            <td>${sanitizeHTML(item.review_feedback || "—")}</td>
+            <td><button class="btn-action-sm btn-approve" onclick="editVendorListing('${item.id}')">Edit</button></td>
           </tr>
-        `).join("");
+        `;
+        }).join("");
       }
 
-      // Filter Inquiries for THIS vendor
-      const allRequests = JSON.parse(localStorage.getItem("ghoomoup_requests") || "[]");
-      const vendorListingIds = vendorListings.map(l => l.id);
-      const vendorListingTitles = vendorListings.map(l => l.title.toLowerCase());
-
-      const myInquiries = allRequests.filter(req => 
-        vendorListingIds.includes(req.listingId) || 
-        vendorListingTitles.includes((req.listingTitle || "").toLowerCase()) ||
-        req.vendorPhone === currentVendor.phone
-      );
-
-      document.getElementById("v-tab-inquiries-count").textContent = myInquiries.length;
       const inquiriesTbody = document.getElementById("vendor-inquiries-tbody");
-
-      if (myInquiries.length === 0) {
+      if (vendorInquiries.length === 0) {
         inquiriesTbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--color-muted); padding: 22px;">No provider inquiries received yet for your listings.</td></tr>`;
       } else {
-        inquiriesTbody.innerHTML = myInquiries.map(req => {
-          const waMsg = encodeURIComponent(`Namaste ${req.touristName}! I am ${currentVendor.name} regarding your GhoomoUP inquiry for "${req.listingTitle}".`);
+        inquiriesTbody.innerHTML = vendorInquiries.map(req => {
+          const waMsg = encodeURIComponent(`Namaste ${req.tourist_name}! I am ${currentVendor.name} regarding your GhoomoUP inquiry for "${req.listing.title}".`);
+          const touristPhone = (req.tourist_phone || "").replace(/\D/g, "");
           return `
             <tr>
-              <td>${sanitizeHTML(req.date)}</td>
-              <td><strong>${sanitizeHTML(req.touristName)}</strong></td>
-              <td><a href="tel:${sanitizeHTML(req.touristPhone)}" style="color: var(--color-teal); font-weight: 700;">${sanitizeHTML(req.touristPhone)}</a></td>
-              <td>${sanitizeHTML(req.listingTitle)}</td>
-              <td>${sanitizeHTML(req.touristNote || "—")}</td>
+              <td>${sanitizeHTML(new Date(req.created_at).toLocaleString())}</td>
+              <td><strong>${sanitizeHTML(req.tourist_name)}</strong></td>
+              <td><a href="tel:${touristPhone}" style="color: var(--color-teal); font-weight: 700;">${sanitizeHTML(req.tourist_phone)}</a></td>
+              <td>${sanitizeHTML(req.listing.title)}</td>
+              <td>${sanitizeHTML(req.message || "—")}</td>
               <td>
-                <a href="https://wa.me/${req.touristPhone.replace(/\D/g, "")}?text=${waMsg}" target="_blank" class="btn-action-sm btn-approve" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                <a href="https://wa.me/${touristPhone}?text=${waMsg}" target="_blank" rel="noopener noreferrer" class="btn-action-sm btn-approve" style="text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
                   💬 WhatsApp
                 </a>
               </td>
@@ -4918,6 +5147,47 @@
           `;
         }).join("");
       }
+    }
+
+    async function handleVendorProfileSubmit(event) {
+      event.preventDefault();
+      if (!currentVendor) return;
+      const contact = document.getElementById("vendor-contact-number").value.trim();
+      const whatsapp = document.getElementById("vendor-whatsapp-number").value.trim();
+      if (!isValidBusinessPhone(contact) || !isValidBusinessPhone(whatsapp)) {
+        showVendorProfileMessage("Enter valid phone numbers with 10–15 digits.", false);
+        return;
+      }
+      try {
+        vendorProfile = await window.GhoomoMarketplace.saveVendorProfile(getSupabaseClient(), currentVendor.id, {
+          business_name: document.getElementById("vendor-business-name").value.trim(),
+          owner_name: document.getElementById("vendor-owner-name").value.trim(),
+          contact_number: contact,
+          whatsapp_number: whatsapp,
+          default_category: document.getElementById("vendor-default-category").value
+        });
+        currentVendor.name = vendorProfile.business_name;
+        currentVendor.phone = vendorProfile.contact_number;
+        currentVendor.whatsapp = vendorProfile.whatsapp_number;
+        updateAuthHeaderUI();
+        renderVendorDashboard();
+        showVendorProfileMessage("Business profile saved.", true);
+      } catch (error) {
+        console.error("Vendor profile save failed:", error.message);
+        showVendorProfileMessage("Could not save your profile. Please try again.", false);
+      }
+    }
+
+    function showVendorProfileMessage(message, success) {
+      const status = document.getElementById("vendor-profile-status");
+      status.textContent = message;
+      status.style.color = success ? "#137333" : "var(--color-terracotta)";
+      status.style.display = "block";
+    }
+
+    function isValidBusinessPhone(value) {
+      const digits = String(value || "").replace(/\D/g, "");
+      return digits.length >= 10 && digits.length <= 15;
     }
 
     // --- 9. PACKAGE REQUEST & CONFIRMATION ---
@@ -4941,11 +5211,19 @@
       document.getElementById("package-modal").classList.add("active");
     }
 
+    async function trackWhatsAppClick(listingId, source) {
+      try {
+        await window.GhoomoMarketplace.recordWhatsAppClick(getSupabaseClient(), listingId, source);
+      } catch (error) {
+        console.warn("WhatsApp contact event could not be recorded:", error.message);
+      }
+    }
+
     function closePackageModal() {
       document.getElementById("package-modal").classList.remove("active");
     }
 
-    function handlePackageRequestSubmit(event) {
+    async function handlePackageRequestSubmit(event) {
       event.preventDefault();
       const listingId = document.getElementById("package-listing-id").value;
       const listingTitle = document.getElementById("package-listing-title").value;
@@ -4955,15 +5233,17 @@
       const touristName = sanitizeHTML(document.getElementById("tourist-name").value.trim());
       const touristPhone = sanitizeHTML(document.getElementById("tourist-phone").value.trim());
       const touristNote = sanitizeHTML(document.getElementById("tourist-note").value.trim());
-      const sourceListing = listings.find(item => item.id === listingId)
-        || DEFAULT_LISTINGS.find(item => item.id === listingId)
-        || null;
+      const sourceListing = listings.find(item => item.id === listingId && item.status === "approved");
+      if (!sourceListing || !isValidBusinessPhone(touristPhone)) {
+        showToast("This listing is no longer available or the phone number is invalid.");
+        return;
+      }
       const impactSnapshot = buildDirectLocalImpact(sourceListing);
 
-      const refId = "GB-" + (site.toUpperCase().replace(/\W/g, "")) + "-" + Math.floor(1000 + Math.random() * 9000);
+      const refId = "GU-" + (site.toUpperCase().replace(/\W/g, "")) + "-" + Math.floor(1000 + Math.random() * 9000);
 
       const requestObj = {
-        id: "req-" + Date.now(),
+        id: crypto.randomUUID(),
         refId,
         date: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         listingId,
@@ -4974,19 +5254,28 @@
         touristName,
         touristPhone,
         touristNote,
+        saved: false,
         impactSnapshot
       };
 
-      const existingReqs = JSON.parse(localStorage.getItem("ghoomoup_requests") || "[]");
-      existingReqs.unshift(requestObj);
-      localStorage.setItem("ghoomoup_requests", JSON.stringify(existingReqs));
+      try {
+        await window.GhoomoMarketplace.recordInquiry(
+          getSupabaseClient(),
+          listingId,
+          { tourist_name: touristName, tourist_phone: touristPhone, message: touristNote },
+          /^\/scan\//.test(window.location.pathname) ? "qr" : "listing"
+        );
+        requestObj.saved = true;
+      } catch (error) {
+        console.error("Tourist inquiry could not be saved:", error.message);
+      }
 
       closePackageModal();
 
-      // Show Itemized Confirmation Modal
       showBookingConfirmation(requestObj);
-      renderAdminTables();
-      renderVendorDashboard();
+      if (!requestObj.saved) {
+        showToast("Inquiry could not be saved. You can still contact the provider on WhatsApp.");
+      }
     }
 
     function showBookingConfirmation(req) {
@@ -5004,12 +5293,14 @@
       const impact = req.impactSnapshot || buildDirectLocalImpact(sourceListing);
       const impactSlot = document.getElementById("confirmation-direct-impact-slot");
       impactSlot.innerHTML = "";
-      impactSlot.appendChild(createDirectLocalImpactCard(impact, "booking"));
+      impactSlot.appendChild(createDirectLocalImpactCard(impact, "inquiry"));
 
       const waMsg = encodeURIComponent(
-        `Namaste! I just sent an inquiry for "${req.listingTitle}" on GhoomoUP (Ref: ${req.refId}).\nName: ${req.touristName}\nPhone: ${req.touristPhone}\nRequest: ${req.touristNote || "Please share details"}`
+        `Hello, I discovered your service through GhoomoUP. I am interested in learning more about your offering.\n\nService: ${req.listingTitle}\nQuestion: ${req.touristNote || "Please share more details."}`
       );
-      document.getElementById("conf-wa-btn").href = `https://wa.me/${(req.vendorPhone || "").replace(/\D/g, "")}?text=${waMsg}`;
+      const contactLink = document.getElementById("conf-wa-btn");
+      contactLink.href = `https://wa.me/${(req.vendorPhone || "").replace(/\D/g, "")}?text=${waMsg}`;
+      contactLink.onclick = () => trackWhatsAppClick(req.listingId, "listing");
 
       document.getElementById("confirmation-modal").classList.add("active");
     }
@@ -5025,18 +5316,17 @@
         return;
       }
       document.getElementById("logged-vendor-name").textContent = currentVendor.name;
-      document.getElementById("listing-whatsapp").value = currentVendor.phone;
-      document.getElementById("listing-site").value = currentSite;
-      uploadedPhotoBase64 = "";
-      document.getElementById("photo-preview-wrap").style.display = "none";
+      editingListingId = null;
+      pendingListingPhoto = null;
       document.getElementById("listing-submission-form").reset();
+      document.getElementById("listing-site").value = currentSite;
+      document.getElementById("photo-preview-wrap").style.display = "none";
       const briefInput = document.getElementById("ai-draft-brief");
       if (briefInput) briefInput.value = "";
       const statusDiv = document.getElementById("ai-draft-status-msg");
       if (statusDiv) statusDiv.style.display = "none";
-      document.getElementById("listing-whatsapp").value = currentVendor.phone;
       handleCategoryChange();
-      handleSiteChange();
+      setListingFormStatus("", false);
 
       document.getElementById("listing-modal").classList.add("active");
     }
@@ -5149,11 +5439,17 @@
     function handlePhotoUploadPreview(e) {
       const file = e.target.files[0];
       if (!file) return;
-
+      if (!window.GhoomoMarketplace.ALLOWED_IMAGE_TYPES.has(file.type) ||
+          file.size > window.GhoomoMarketplace.MAX_IMAGE_BYTES) {
+        e.target.value = "";
+        pendingListingPhoto = null;
+        setListingFormStatus("Choose a JPEG, PNG or WebP image up to 5 MB.", false);
+        return;
+      }
+      pendingListingPhoto = file;
       const reader = new FileReader();
       reader.onload = function(evt) {
-        uploadedPhotoBase64 = evt.target.result;
-        document.getElementById("photo-preview-img").src = uploadedPhotoBase64;
+        document.getElementById("photo-preview-img").src = evt.target.result;
         document.getElementById("photo-preview-wrap").style.display = "block";
       };
       reader.readAsDataURL(file);
@@ -5190,53 +5486,116 @@
       }
     }
 
-    function handleListingSubmit(e) {
-      e.preventDefault();
-      const title = sanitizeHTML(document.getElementById("listing-title").value.trim());
-      
-      // Get category (standard or custom other)
-      let category = document.getElementById("listing-category").value;
-      if (category === "other") {
-        category = sanitizeHTML(document.getElementById("listing-category-other").value.trim()) || "Local Service";
+    function setListingFormStatus(message, success) {
+      const status = document.getElementById("listing-form-status");
+      status.textContent = message;
+      status.style.color = success ? "#137333" : "var(--color-terracotta)";
+      status.style.display = message ? "block" : "none";
+    }
+
+    function saveListingDraft() {
+      saveVendorListing(false);
+    }
+
+    async function handleListingSubmit(event) {
+      event.preventDefault();
+      await saveVendorListing(true);
+    }
+
+    async function saveVendorListing(submitForReview) {
+      if (!currentVendor || !document.getElementById("listing-submission-form").reportValidity()) return;
+      const client = getSupabaseClient();
+      const siteCode = document.getElementById("listing-site").value;
+      const { data: site, error: siteError } = await client.from("sites")
+        .select("id")
+        .eq("code", siteCode)
+        .eq("active", true)
+        .single();
+      if (siteError || !site) {
+        console.error("Destination lookup failed:", siteError && siteError.message);
+        setListingFormStatus("This destination is unavailable. Refresh and choose an active destination.", false);
+        return;
       }
 
-      // Get destination (standard or custom other)
-      let site = document.getElementById("listing-site").value;
-      if (site === "other") {
-        site = sanitizeHTML(document.getElementById("listing-site-other").value.trim()) || "Uttar Pradesh";
-      }
-
-      const description = sanitizeHTML(document.getElementById("listing-desc").value.trim());
-      const price = sanitizeHTML(document.getElementById("listing-price").value.trim());
-      const whatsapp = sanitizeHTML(document.getElementById("listing-whatsapp").value.trim());
-      const openHours = sanitizeHTML(document.getElementById("listing-hours").value.trim());
-      const specialty = sanitizeHTML(document.getElementById("listing-specialty").value.trim());
-
-      const newListing = {
-        id: "custom-" + Date.now(),
-        title,
-        category,
-        site,
-        description,
-        price,
-        whatsapp,
-        openHours,
-        rating: 4.9,
-        specialty,
-        verified: false,
-        status: "approved", // Immediately live on the platform!
-        reviewedByAdmin: false, // Flag for Admin Review Queue
-        submittedBy: currentVendor ? currentVendor.name : "Local Entrepreneur",
-        photo: uploadedPhotoBase64 || SITE_METADATA[site]?.image || "assets/varanasi-illustration.svg"
+      const listing = {
+        site_id: site.id,
+        category: document.getElementById("listing-category").value,
+        title: document.getElementById("listing-title").value.trim(),
+        description: document.getElementById("listing-desc").value.trim(),
+        address: document.getElementById("listing-address").value.trim(),
+        service_area: document.getElementById("listing-service-area").value.trim(),
+        price_information: document.getElementById("listing-price").value.trim(),
+        specialty: document.getElementById("listing-specialty").value.trim(),
+        operating_hours: document.getElementById("listing-hours").value.trim()
       };
 
-      listings.push(newListing);
-      saveListings();
-      renderDetailListings();
-      closeListingModal();
+      try {
+        let listingId = editingListingId;
+        let savedStatus = "DRAFT";
+        if (listingId) {
+          const updated = await window.GhoomoMarketplace.updateListing(client, listingId, listing);
+          savedStatus = updated.status;
+          if (pendingListingPhoto && vendorListings.find(item => item.id === listingId)?.status === "APPROVED") {
+            savedStatus = "PENDING";
+          }
+        } else {
+          const created = await window.GhoomoMarketplace.createListing(client, currentVendor.id, listing);
+          listingId = created.id;
+          editingListingId = listingId;
+        }
 
-      showToast(`✓ "${title}" was submitted for review. It will appear publicly only after approval.`);
-      renderVendorDashboard();
+        if (pendingListingPhoto) {
+          await window.GhoomoMarketplace.uploadListingImage(
+            client, currentVendor.id, listingId, pendingListingPhoto, listing.title
+          );
+          pendingListingPhoto = null;
+          document.getElementById("listing-photo-file").value = "";
+        }
+
+        if (submitForReview && savedStatus !== "APPROVED") {
+          await window.GhoomoMarketplace.submitListing(client, listingId);
+        }
+        await refreshVendorMarketplace();
+        await loadPublicListings();
+        closeListingModal();
+        showToast(submitForReview
+          ? savedStatus === "APPROVED"
+            ? "No listing changes were detected; it remains approved."
+            : "Listing submitted for admin review. It remains private until approved."
+          : savedStatus === "PENDING"
+            ? "Changes saved. The listing is hidden while it awaits review."
+            : "Draft saved to your vendor account.");
+      } catch (error) {
+        console.error("Vendor listing save failed:", error.message);
+        setListingFormStatus(error.message || "Could not save your listing. Please try again.", false);
+      }
+    }
+
+    function editVendorListing(listingId) {
+      const listing = vendorListings.find(item => item.id === listingId);
+      if (!listing || !currentVendor) return;
+      editingListingId = listing.id;
+      pendingListingPhoto = null;
+      document.getElementById("logged-vendor-name").textContent = currentVendor.name;
+      document.getElementById("listing-title").value = listing.title;
+      document.getElementById("listing-category").value = listing.category;
+      document.getElementById("listing-site").value = listing.site_code;
+      document.getElementById("listing-desc").value = listing.description;
+      document.getElementById("listing-address").value = listing.address || "";
+      document.getElementById("listing-service-area").value = listing.service_area || "";
+      document.getElementById("listing-price").value = listing.price_information || "";
+      document.getElementById("listing-hours").value = listing.operating_hours || "";
+      document.getElementById("listing-specialty").value = listing.specialty || "";
+      document.getElementById("listing-photo-file").value = "";
+      const image = (listing.images || [])[0];
+      document.getElementById("photo-preview-wrap").style.display = image ? "block" : "none";
+      if (image) document.getElementById("photo-preview-img").src = image.url;
+      handleCategoryChange();
+      setListingFormStatus(
+        listing.review_feedback || (listing.status === "PENDING" ? "This listing is pending review. Changes will remain private until approved." : ""),
+        false
+      );
+      document.getElementById("listing-modal").classList.add("active");
     }
 
     // --- 11. ADMIN DASHBOARD ACTIONS ---
@@ -5252,115 +5611,119 @@
     function renderAdminTables() {
       if (!isAdminActive) return;
 
-      // 1. New Submissions Needing Review Table (reviewedByAdmin === false)
       const pendingTbody = document.getElementById("admin-pending-tbody");
-      const needsReviewListings = listings.filter(l => l.reviewedByAdmin === false);
+      const needsReviewListings = adminListings.filter(item => item.status === "PENDING");
       document.getElementById("admin-tab-pending-count").textContent = needsReviewListings.length;
 
       if (needsReviewListings.length === 0) {
-        pendingTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--color-muted); padding: 20px;">✓ All listings have been reviewed by Admin. No pending reviews in queue!</td></tr>`;
+        pendingTbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--color-muted); padding: 20px;">No listings are waiting for review.</td></tr>`;
       } else {
-        pendingTbody.innerHTML = needsReviewListings.map(item => `
+        pendingTbody.innerHTML = needsReviewListings.map(item => {
+          const image = (item.images || [])[0];
+          return `
           <tr>
-            <td><img src="${item.photo || 'assets/varanasi-illustration.svg'}" class="table-thumbnail" alt="Provider listing"></td>
-            <td><strong>${sanitizeHTML(item.title)}</strong><br><span style="font-size: 11px; color: var(--color-terracotta); font-weight: 700;">● Live (Needs Review)</span></td>
-            <td><span class="category-tag">${item.category}</span></td>
-            <td>${SITE_METADATA[item.site]?.name || item.site}</td>
-            <td>${sanitizeHTML(item.price)}</td>
-            <td>${sanitizeHTML(item.whatsapp)}</td>
+            <td>${image ? `<a href="${escapeAttr(image.url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeAttr(image.url)}" class="table-thumbnail" alt="${escapeAttr(image.alt_text || item.title)}"></a>` : "—"}</td>
+            <td><strong>${sanitizeHTML(item.title)}</strong><br><span style="font-size: 11px; color: var(--color-terracotta); font-weight: 700;">● Private — awaiting review</span></td>
+            <td><span class="category-tag">${sanitizeHTML(item.category)}</span></td>
+            <td>${sanitizeHTML(item.site && item.site.name || "")}</td>
+            <td>${sanitizeHTML(item.price_information || "Not provided")}</td>
+            <td>${sanitizeHTML(item.vendor && item.vendor.whatsapp_number || "")}<br>${sanitizeHTML(item.vendor && item.vendor.contact_number || "")}</td>
             <td>${sanitizeHTML(item.specialty)}</td>
+            <td>${sanitizeHTML(item.vendor && item.vendor.business_name || "")}<br>${sanitizeHTML(item.vendor && item.vendor.owner_name || "")}</td>
             <td>
               <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                <button class="btn-action-sm btn-approve" onclick="adminMarkReviewed('${item.id}')" title="Acknowledge listing as reviewed">✓ Mark Reviewed</button>
-                <button class="btn-action-sm btn-approve" style="background: var(--color-gold); color: #2D1E01;" onclick="adminApproveListing('${item.id}')" title="Verify listing">✓ Verify</button>
-                <button class="btn-action-sm btn-reject" onclick="adminRemoveListing('${item.id}')" title="Permanently delete from platform">🗑️ Remove</button>
+                <button class="btn-action-sm btn-approve" onclick="adminReviewListing('${item.id}', 'approve')">Approve</button>
+                <button class="btn-action-sm btn-reject" onclick="adminReviewListing('${item.id}', 'request_changes')">Request changes</button>
+                <button class="btn-action-sm btn-reject" onclick="adminReviewListing('${item.id}', 'reject')">Reject</button>
               </div>
             </td>
           </tr>
-        `).join("");
+        `;
+        }).join("");
       }
 
-      // 2. All Active Listings Table with Permanent Remove Button
       const approvedTbody = document.getElementById("admin-approved-tbody");
-      const activeListings = listings.filter(l => l.status === "approved");
+      const activeListings = adminListings.filter(item => ["APPROVED", "INACTIVE"].includes(item.status));
       document.getElementById("admin-tab-approved-count").textContent = activeListings.length;
 
-      approvedTbody.innerHTML = activeListings.map(item => `
+      approvedTbody.innerHTML = activeListings.map(item => {
+        const image = (item.images || [])[0];
+        return `
         <tr>
-          <td><img src="${item.photo || 'assets/varanasi-illustration.svg'}" class="table-thumbnail" alt="Provider listing"></td>
+          <td>${image ? `<img src="${escapeAttr(image.url)}" class="table-thumbnail" alt="${escapeAttr(image.alt_text || item.title)}">` : "—"}</td>
           <td><strong>${sanitizeHTML(item.title)}</strong></td>
-          <td><span class="category-tag">${item.category}</span></td>
-          <td>${SITE_METADATA[item.site]?.name || item.site}</td>
-          <td>★ ${item.rating || 4.8}</td>
-          <td>${item.verified ? '<span class="verified-badge">✓ Verified</span>' : '<span style="color: var(--color-muted); font-size: 12px;">Unverified</span>'}</td>
+          <td><span class="category-tag">${sanitizeHTML(item.category)}</span></td>
+          <td>${sanitizeHTML(item.site && item.site.name || "")}</td>
+          <td>${sanitizeHTML(item.status)}</td>
+          <td>${sanitizeHTML(item.vendor && item.vendor.business_name || "")}</td>
+          <td>${sanitizeHTML(item.review_feedback || "—")}</td>
           <td>
-            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-              ${!item.verified ? `<button class="btn-action-sm btn-approve" onclick="adminApproveListing('${item.id}')">✓ Verify</button>` : ''}
-              <button class="btn-action-sm btn-reject" onclick="adminRemoveListing('${item.id}')" title="Permanently delete from platform">🗑️ Remove</button>
-            </div>
+            ${item.status === "APPROVED"
+              ? `<button class="btn-action-sm btn-reject" onclick="adminReviewListing('${item.id}', 'deactivate')">Deactivate</button>`
+              : `<button class="btn-action-sm btn-approve" onclick="adminReviewListing('${item.id}', 'approve')">Reactivate</button>`}
           </td>
         </tr>
-      `).join("");
+      `;
+      }).join("");
 
-      // 3. Inquiries Table
       const requestsTbody = document.getElementById("admin-requests-tbody");
-      const inquiries = JSON.parse(localStorage.getItem("ghoomoup_requests") || "[]");
+      const inquiries = adminInquiries.filter(item => item.event_type === "inquiry");
+      const contactClicks = adminInquiries.filter(item => item.event_type === "whatsapp_click").length;
       document.getElementById("admin-tab-requests-count").textContent = inquiries.length;
+      document.getElementById("admin-contact-clicks").textContent =
+        `${contactClicks} WhatsApp contact clicks recorded. A click is not a confirmed booking.`;
 
       if (inquiries.length === 0) {
         requestsTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--color-muted); padding: 20px;">No inquiries received yet.</td></tr>`;
       } else {
         requestsTbody.innerHTML = inquiries.map(req => `
           <tr>
-            <td>${sanitizeHTML(req.date)}</td>
-            <td><strong>${sanitizeHTML(req.touristName)}</strong></td>
-            <td><a href="tel:${sanitizeHTML(req.touristPhone)}" style="color: var(--color-teal); font-weight: 700;">${sanitizeHTML(req.touristPhone)}</a></td>
-            <td>${sanitizeHTML(req.listingTitle)}</td>
-            <td>${sanitizeHTML(req.touristNote || "—")}</td>
+            <td>${sanitizeHTML(new Date(req.created_at).toLocaleString())}</td>
+            <td><strong>${sanitizeHTML(req.tourist_name)}</strong></td>
+            <td><a href="tel:${(req.tourist_phone || "").replace(/\D/g, "")}" style="color: var(--color-teal); font-weight: 700;">${sanitizeHTML(req.tourist_phone)}</a></td>
+            <td>${sanitizeHTML(adminListings.find(item => item.id === req.listing_id)?.title || "Listing")}</td>
+            <td>${sanitizeHTML(req.message || "—")}</td>
           </tr>
         `).join("");
       }
     }
 
-    async function adminMarkReviewed(id) {
+    async function adminReviewListing(id, action) {
       if (!await requireAdminSession()) return;
-      const item = listings.find(l => l.id === id);
-      if (item) {
-        item.reviewedByAdmin = true;
-        saveListings();
-        renderAdminTables();
-        renderVendorDashboard();
-        showToast(`✓ "${item.title}" marked as reviewed.`);
+      let feedback = "";
+      if (["reject", "request_changes", "deactivate"].includes(action)) {
+        const promptLabel = action === "deactivate"
+          ? "Why is this listing being deactivated?"
+          : action === "reject"
+            ? "Explain why this listing is rejected."
+            : "Describe the changes needed before resubmission.";
+        feedback = (window.prompt(promptLabel) || "").trim();
+        if (!feedback) {
+          showToast("Add review feedback before continuing.");
+          return;
+        }
+      }
+      const actionLabel = action === "request_changes" ? "request_changes" : action;
+      try {
+        await fetchAdminMarketplace({
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ listingId: id, action: actionLabel, feedback })
+        });
+        await Promise.all([refreshAdminMarketplace(), loadPublicListings()]);
+        showToast(action === "approve" ? "Listing approved and now public." : "Review decision saved.");
+      } catch (error) {
+        console.error("Admin review action failed:", error.message);
+        showToast(error.message || "Could not save the review decision.");
       }
     }
 
     async function adminApproveListing(id) {
-      if (!await requireAdminSession()) return;
-      const item = listings.find(l => l.id === id);
-      if (item) {
-        item.status = "approved";
-        item.reviewedByAdmin = true;
-        item.verified = true;
-        saveListings();
-        renderDetailListings();
-        renderAdminTables();
-        renderVendorDashboard();
-        showToast(`✅ "${item.title}" verified! Verified badge added.`);
-      }
+      return adminReviewListing(id, "approve");
     }
 
     async function adminRemoveListing(id) {
-      if (!await requireAdminSession()) return;
-      const item = listings.find(l => l.id === id);
-      const title = item ? item.title : "Listing";
-      if (confirm(`Permanently remove "${title}" from GhoomoUP? This deletes it completely from local storage.`)) {
-        listings = listings.filter(l => l.id !== id);
-        saveListings();
-        renderDetailListings();
-        renderAdminTables();
-        renderVendorDashboard();
-        showToast(`🗑️ "${title}" permanently removed from platform.`);
-      }
+      return adminReviewListing(id, "deactivate");
     }
 
     // ==========================================================================
@@ -5849,13 +6212,13 @@
         const recCard = document.createElement("div");
         recCard.className = "ai-rec-card";
         const cleanWa = (recommendation.whatsapp || "").replace(/\D/g, "");
-        const waMsg = encodeURIComponent(`Namaste! I found "${recommendation.title}" via Shartak AI guide. I want to inquire about ${recommendation.category}.`);
+        const waMsg = encodeURIComponent("Hello, I discovered your service through GhoomoUP. I am interested in learning more about your offering.");
         recCard.innerHTML = `
           <div class="ai-rec-info">
             <div class="ai-rec-title">📍 ${sanitizeHTML(recommendation.title)}</div>
             <div style="color: var(--color-muted); font-size: 11px;">${sanitizeHTML(recommendation.specialty)} • ${sanitizeHTML(recommendation.price)}</div>
           </div>
-          <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" class="ai-rec-btn">
+          <a href="https://wa.me/${cleanWa}?text=${waMsg}" target="_blank" rel="noopener noreferrer" class="ai-rec-btn" onclick="trackWhatsAppClick('${recommendation.id}', 'ai')">
             💬 WhatsApp
           </a>
         `;
