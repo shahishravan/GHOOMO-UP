@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration inspired by Ayodhya</title>
+  <desc id="desc">A temple silhouette above the Saryu river at dusk.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#dc927b"/>
+      <stop offset="1" stop-color="#f5d2a4"/>
+    </linearGradient>
+    <linearGradient id="water" x2="0" y2="1">
+      <stop stop-color="#427d88"/>
+      <stop offset="1" stop-color="#193f54"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1200v430H0z"/>
+  <circle cx="245" cy="205" r="75" fill="#ffe5ae"/>
+  <path fill="#874e4c" d="M0 412h1200v288H0z"/>
+  <path fill="#a95e4e" d="M160 411V267h50v-49l47-55 47 55v49h50v144zm253 0V231h48v-53l49-62 49 62v53h48v180zm245 0V270h43v-42l44-54 44 54v42h43v141zm226 0V233h44v-49l48-58 48 58v49h44v178z"/>
+  <path fill="#efb66f" d="M208 267h95v17h-95zm204-36h99v17h-99zm246 39h87v17h-87zm225-37h96v17h-96z"/>
+  <path fill="#f5e5c4" d="M0 448h1200v252H0z"/>
+  <path fill="url(#water)" d="M0 486c170-36 284 24 436-1s291 28 443 0 222 13 321 0v215H0z"/>
+  <path fill="none" stroke="#a9d8cd" stroke-width="8" opacity=".75" d="M0 550c128-22 237 25 364 0s229 22 356 0 228 22 355 0 91 8 125 0M0 631c147-20 240 19 387 0s235 19 382 0 234 19 381 0 31 5 50 0"/>
+  <path fill="#f6c56f" d="M558 423h84v49h-84zm-24 47h132l29 19H505z"/>
+</svg>

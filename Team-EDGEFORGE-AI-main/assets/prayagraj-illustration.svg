@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration inspired by Prayagraj</title>
+  <desc id="desc">Two rivers meet beneath a warm sunrise and a distant bridge.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#efb37c"/>
+      <stop offset="1" stop-color="#f5e2bd"/>
+    </linearGradient>
+    <linearGradient id="ganga" x2="0" y2="1">
+      <stop stop-color="#34858b"/>
+      <stop offset="1" stop-color="#174459"/>
+    </linearGradient>
+    <linearGradient id="yamuna" x2="1" y2="0">
+      <stop stop-color="#4c9a9a"/>
+      <stop offset="1" stop-color="#225f77"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1200v400H0z"/>
+  <circle cx="890" cy="190" r="82" fill="#ffefc7"/>
+  <path fill="#80605a" d="M0 359h1200v60H0z"/>
+  <path fill="none" stroke="#f8e7c8" stroke-width="15" d="M95 357v-74m125 74v-99m125 99v-78m125 78v-112m125 112v-92m125 92v-125m125 125v-83m125 83v-107"/>
+  <path fill="none" stroke="#80584e" stroke-width="10" d="M95 300h1000M95 274h1000"/>
+  <path fill="url(#ganga)" d="M0 420h1200v280H0z"/>
+  <path fill="url(#yamuna)" d="M0 700V535c175-50 325-70 496-43 133 21 224 80 350 75 137-6 233-68 354-71v204z"/>
+  <path fill="none" stroke="#c3e4d6" stroke-width="8" opacity=".75" d="M0 480c170-24 259-14 430 10s265 34 424 5 244-43 346-30M0 620c172-24 276 10 432 21s263-24 427-9 251 27 341 4"/>
+  <path fill="#f5c074" d="M490 458c36-16 66-18 105-5l-18 32h-71z"/>
+</svg>

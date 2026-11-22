@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" role="img" aria-labelledby="title desc">
+  <title id="title">Illustration inspired by Varanasi</title>
+  <desc id="desc">Sunrise over the Ganga and stepped riverfront ghats.</desc>
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#f6c889"/>
+      <stop offset="1" stop-color="#f8e6bf"/>
+    </linearGradient>
+    <linearGradient id="river" x2="0" y2="1">
+      <stop stop-color="#287b86"/>
+      <stop offset="1" stop-color="#123e52"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1200v390H0z"/>
+  <circle cx="850" cy="210" r="95" fill="#fff0bd"/>
+  <path fill="#d77d59" d="M0 310h205v44h160v46h130v56h120v65H0z"/>
+  <path fill="#bd664b" d="M0 260h140v50H0zm160-58h142v108H160zm180 26h152v132H340zm201-95h147v201H541zm184 58h136v143H725zm173-79h153v222H898zm187 79h115v143h-115z"/>
+  <path fill="#edb36f" d="M25 285h90v25H25zm164-56h104v20H189zm180 26h110v20H369zm205-95h98v20h-98zm184 58h88v20h-88zm173-79h102v20H904z"/>
+  <path fill="url(#river)" d="M0 475h1200v225H0z"/>
+  <path fill="none" stroke="#90d1c9" stroke-width="8" opacity=".8" d="M0 535c130-30 215 29 344 0s213 28 342 0 212 28 341 0 112 4 173 0M0 620c142-25 210 24 350 0s209 23 350 0 208 22 350 0 98 4 150 0"/>
+  <path fill="#f3bd76" d="M0 465h248v22H0zm248 0h208v-24H248zm208 0h170v-28H456zm170 0h177v-25H626zm177 0h184v-26H803zm184 0h213v-24H987z"/>
+  <path fill="#f6e8cd" d="M108 335h13v22h-13zm224 17h13v22h-13zm255-76h13v22h-13zm212 21h13v22h-13zm253-58h13v22h-13z"/>
+</svg>

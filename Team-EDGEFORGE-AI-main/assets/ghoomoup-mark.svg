@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title description">
+  <title id="title">GhoomoUP mark</title>
+  <desc id="description">A warm sunrise over river waves and a heritage arch.</desc>
+  <defs>
+    <linearGradient id="indigo" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#285b78"/>
+      <stop offset="1" stop-color="#19364f"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="29" fill="url(#indigo)"/>
+  <circle cx="32" cy="32" r="28" fill="none" stroke="#e9b65f" stroke-width="2"/>
+  <circle cx="32" cy="22" r="7" fill="#f2bc67"/>
+  <path d="M17 43h30v4H17z" fill="#f7edda"/>
+  <path fill="#d27a55" d="M20 42V31l12-10 12 10v11h-7v-8a5 5 0 0 0-10 0v8z"/>
+  <path d="M14 50c7-3 12 3 18 0s11 3 18 0M17 54c6-2.5 10 2.5 15 0s9 2.5 15 0" fill="none" stroke="#82c7c3" stroke-width="2" stroke-linecap="round"/>
+</svg>
